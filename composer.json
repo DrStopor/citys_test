@@ -1,0 +1,27 @@
+{
+    "name": "dmitrijrudov/citys_test",
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "d.rudov",
+            "email": "rds18@mail.ru"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "imy/core": "dev-main",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "roave/security-advisories": "dev-latest"
+    },
+    "config": {
+        "platform-check": false
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/feastker/imy-core.git"
+        }
+    ]
+}
