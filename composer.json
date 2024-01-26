@@ -7,6 +7,12 @@
             "email": "rds18@mail.ru"
         }
     ],
+    "autoload": {
+        "psr-4": {
+            "app\\": "/app",
+            "public\\": "/public"
+        }
+    },
     "require": {
         "php": ">=7.4",
         "imy/core": "dev-main",
