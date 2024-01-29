@@ -1,5 +1,7 @@
 <?php
 
+use helper\Helper;
+use helper\HtmlBuilder;
 use model\City;
 use Imy\Core\Cache;
 use Imy\Core\Controller;
@@ -12,8 +14,40 @@ class CityController extends Controller
 {
     final public function init(): void
     {
-        $this->v['name'] = 'Города по странам и регионам';
+        $this->v['titleH1'] = 'Города по странам и регионам';
 
+        $lang = $this->getLang();
+
+        $cityLang = "city_$lang";
+
+        $getCache = (new Cache())->get($cityLang);
+        if ($getCache) {
+            $this->v['result'] = $getCache;
+            return;
+        }
+
+        try {
+            $cities = City::getCityByLang($lang);
+        } catch (Exception $e) {
+            $this->v['error'] = $e->getMessage();
+            return;
+        }
+
+        $countries = Helper::prepareCitiesInfo($cities);
+
+        if (!empty($countries['countries']) && is_array($countries['countries'])) {
+            (new Cache())->set($cityLang, $countries, 30);
+        }
+
+        $this->v['html'] = HtmlBuilder::buildListCountryBlock($countries['countries'], $countries['descriptions'])
+            ?? '<div class="col-12"><p>Нет данных</p></div>';
+    }
+
+    /**
+     * @return string
+     */
+    private function getLang(): string
+    {
         switch ($this->request->get('lang')) {
             case 'eng':
                 $lang = 'eng';
@@ -24,81 +58,6 @@ class CityController extends Controller
             default:
                 $lang = 'rus';
         }
-
-        $getCache = (new Cache())->get("city_$lang");
-        if ($getCache) {
-            $this->v['result'] = $getCache;
-            return;
-        }
-
-        $cities = City::getCityByLang($lang);
-
-        [$countryDescription, $regionDescriptionByCountry, $countries] = $this->prepareValues($cities);
-
-        if (!empty($countries) && is_array($countries)) {
-            (new Cache())->set("city_$lang", $countries, 30);
-        }
-
-        $this->v['countries'] = $countries;
-        $this->v['descriptions'] = $this->getDescriptions($countryDescription, $regionDescriptionByCountry);
-    }
-
-    /**
-     * @param array $countryDescription
-     * @param array $regionDescription
-     * @return Descriptive
-     */
-    private function getDescriptions(array $countryDescription, array $regionDescription): \Descriptive
-    {
-        return new class($countryDescription, $regionDescription) extends \Descriptions implements \Descriptive
-        {
-            public function __construct(array $countryDescription, array $regionDescription)
-            {
-                $this->countryDescription = $countryDescription;
-                $this->regionDescription = $regionDescription;
-            }
-
-            /**
-             * @inheritDoc
-             */
-            public function getCountryDescription(string $country): string
-            {
-                return $this->countryDescription[$country] ?? '';
-            }
-
-            /**
-             * @inheritDoc
-             */
-            public function getRegionDescription(string $country, string $region): string
-            {
-                return $this->regionDescription[$country][$region] ?? '';
-            }
-        };
-    }
-
-    /**
-     * @param array $cities
-     * @return array
-     */
-    private function prepareValues(array $cities): array
-    {
-        $countries = [];
-        $countryDescription = [];
-        $regionDescriptionByCountry = [];
-        foreach ($cities as $city) {
-            !isset($countryDescription[$city->country]) || empty($countryDescription[$city->country])
-                ? $countryDescription[$city->country] = $city->country_description
-                : null;
-
-            !isset($regionDescriptionByCountry[$city->country][$city->region]) || empty($regionDescriptionByCountry[$city->country][$city->region])
-                ? $regionDescriptionByCountry[$city->country][$city->region] = $city->region_description
-                : null;
-
-            $countries[$city->country][$city->region][] = [
-                'city' => $city->city,
-                'description' => $city->description
-            ];
-        }
-        return array($countryDescription, $regionDescriptionByCountry, $countries);
+        return $lang;
     }
 }
